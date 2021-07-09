@@ -1,26 +1,30 @@
 #include "sevenSeg.h"
 
-// Helper
-void lightCathode(Byte cathodeValue, Byte* cathodePins)
-{
-    int i;
+// 74HC595 Shift Register
+#define DATA_PIN 7 // DS
+#define LATCH_PIN 6 // STCP
+#define CLOCK_PIN 5 // SHCP
 
-    Byte temp = cathodeValue;
+#define DECODER_VALUES 10 // 0 - 9
 
-    for (i = 0; i< NUM_CATHODE_PINS; i++)
-    {
-        digitalWrite(cathodePins[NUM_CATHODE_PINS - 1 - i], temp & 1);
-        temp /= 2;
-    }
-}
+static Byte decoder[] = {
+    0b01111110, // 0
+    0b00110000,
+    0b01101101,
+    0b01111001,
+    0b00110011,
+    0b01011011,
+    0b01011111,
+    0b01110000,
+    0b01111111,
+    0b01111011, // 9
+    0b10000001  // Default
+};
 
-SevenSegmentDisplay::SevenSegmentDisplay(Byte *anodePins, Byte *cathodePins, int numPins) : 
+SevenSegmentDisplay::SevenSegmentDisplay(Byte *anodePins, int numPins) : 
     anodePins(anodePins),
-    cathodePins(cathodePins),
     numPins(numPins)
-    {
-        this->cathode = 0b10000001;
-    }
+    {}
 
 void SevenSegmentDisplay::begin() {
     int i;
@@ -32,53 +36,56 @@ void SevenSegmentDisplay::begin() {
         digitalWrite(anodePins[i], HIGH);
     }
 
-    for (i = 0; i< NUM_CATHODE_PINS; i++)
-        pinMode(cathodePins[i], OUTPUT);
+    pinMode(DATA_PIN, OUTPUT);
+    pinMode(LATCH_PIN, OUTPUT);
+    pinMode(CLOCK_PIN, OUTPUT);
 }
 
-void SevenSegmentDisplay::setCathode(char display) {
-    bool read = digitalRead(anodePins[0]);
-    
-    switch (display)
-    {
-        case '0':
-            this->cathode = 0b01111110;
-            break;
-        case '1':
-            this->cathode = 0b00110000;
-            break;
-        case '2':
-            this->cathode = 0b01101101;
-            break;
-        case '3':
-            this->cathode = 0b01111001;
-            break;
-        case '4':
-            this->cathode = 0b00110011;
-            break;
-        case '5':
-            this->cathode = 0b01011011;
-            break;
-        case '6':
-            this->cathode = 0b01011111;
-            break;
-        case '7':
-            this->cathode = 0b01110000;
-            break;
-        case '8':
-            this->cathode = 0b01111111;
-            break;
-        case '9':
-            this->cathode = 0b01111011;
-            break;
-        default:
-            this->cathode = 0b10000001;
-            break;
-    }
-    lightCathode(this->cathode, this->cathodePins);
-}
-
-Byte SevenSegmentDisplay::getCathode()
+void displayOneDigit(int value)
 {
-    return this->cathode;
+    Byte cathode = (value < DECODER_VALUES) ? decoder[value] : decoder[DECODER_VALUES];
+
+    digitalWrite(LATCH_PIN, LOW);
+    shiftOut(DATA_PIN, CLOCK_PIN, LSBFIRST, cathode);
+    digitalWrite(LATCH_PIN, HIGH);
+}
+
+void resetDigit()
+{
+    digitalWrite(LATCH_PIN, LOW);
+    shiftOut(DATA_PIN, CLOCK_PIN, LSBFIRST, 0);
+    digitalWrite(LATCH_PIN, HIGH);
+}
+
+void SevenSegmentDisplay::setAnode(int anodeIndex)
+{
+    int i;
+
+    for (i = 0; i < numPins; i++)
+        digitalWrite(anodePins[i], HIGH);
+    
+    digitalWrite(anodePins[anodeIndex], LOW);
+}
+
+void SevenSegmentDisplay::displayNum(int value, unsigned seconds) 
+{
+    uint32_t period = seconds * 1000L;       // numSeconds * milli
+
+    int value1 = value % 10;
+    int value10 = value / 10 % 10;
+    int value100 = value / 100 % 10;
+    int value1000 = value / 1000 % 10;
+    int values[] = {value1, value10, value100, value1000};
+    int i;
+
+    for(uint32_t tStart = millis();  (millis()-tStart) < period;)
+    {
+        for (i = 0; i < 4; i++)
+        {
+            resetDigit();
+            setAnode(i);
+            displayOneDigit(values[i]);
+            delay(2);
+        }
+    }
 }

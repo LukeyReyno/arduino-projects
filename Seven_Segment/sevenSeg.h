@@ -12,13 +12,13 @@ class SevenSegmentDisplay {
         Byte cathode;
         int numPins;
 
+        void setAnode(int anodeIndex);
+
     public:
-        SevenSegmentDisplay(Byte *anodePins, Byte *cathodePins, int numPins);
+        SevenSegmentDisplay(Byte *anodePins, int numPins);
 
         void begin();
-
-        void setCathode(char display);
-        Byte getCathode();
+        void displayNum(int value, unsigned seconds);
 };
 
 #endif
