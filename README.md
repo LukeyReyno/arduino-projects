@@ -1,4 +1,4 @@
-# arduino-projects
+# arduino-projects [![wakatime](https://wakatime.com/badge/github/LukeyReyno/arduino-projects.svg)](https://wakatime.com/badge/github/LukeyReyno/arduino-projects)
 Small Arduino Projects using the Elegoo Starter Kit
 
 ### [RGB LED Tuner](../main/RGB_LED_Controller)
